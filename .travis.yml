@@ -1,46 +1,35 @@
-#Thanks to https://raw.github.com/embarkmobile/android-maven-example/master/.travis.yml
-
-branches:
-  only:
-    - master
-    - release
-    - fast-test
-
-language: android
+after_failure:
+- adb logcat -d
 android:
   components:
-    - android-21
-    - android-19
-    - sys-img-armeabi-v7a-android-21
-    - build-tools-21.0.1
-
+  - android-21
+  - android-19
+  - sys-img-armeabi-v7a-android-21
+  - build-tools-21.0.1
+before_install:
+- android list targets
+- echo no | android create avd --force -n test -t $ANDROID_TARGET --abi $ANDROID_ABI
+- emulator -avd test -no-skin -no-audio -no-window &
+before_script:
+- adb devices
+- ./wait_for_emulator
+branches:
+  only:
+  - master
+  - release
+  - fast-test
 env:
   matrix:
-    - ANDROID_TARGET=android-10  ANDROID_ABI=armeabi
-    - ANDROID_TARGET=android-15  ANDROID_ABI=armeabi-v7a
-    - ANDROID_TARGET=android-19  ANDROID_ABI=armeabi-v7a
-#    - ANDROID_TARGET=android-21  ANDROID_ABI=armeabi-v7a
-
-before_install:
-    # Create and start emulator
-    - android list targets
-    - echo no | android create avd --force -n test -t $ANDROID_TARGET --abi $ANDROID_ABI
-#    - cp ~/.android/avd/test.avd/config.ini ~/.android/avd/test.avd/config.ini.back
-#    - cat ~/.android/avd/test.avd/config.ini.back | sed s/hw.ramSize=512/hw.ramSize=1024/ > ~/.android/avd/test.avd/config.ini
-    - emulator -avd test -no-skin -no-audio -no-window &
-
-# We will run findbugs and checkstyle in the script phase
+  - ANDROID_TARGET=android-10  ANDROID_ABI=armeabi
+  - ANDROID_TARGET=android-15  ANDROID_ABI=armeabi-v7a
+  - ANDROID_TARGET=android-19  ANDROID_ABI=armeabi-v7a
 install: mvn install -DskipTests=true -Dmaven.javadoc.skip=true -Dfindbugs.skip=true -Dcheckstyle.skip=true -Dpmd.skip=true -Dandroid.generateApk=false
-
-before_script:
-  - adb devices
-  - ./wait_for_emulator
-
+language: android
+notifications:
+  email: false
+  slack:
+    rooms: flakycov:U2MeVOPjdi4up1U793ubeIUZ
+    template:
+    - Build <%{build_url}|#%{build_number}> (<%{compare_url}|%{commit}>) of %{repository}@%{branch} by %{author} %{result} in %{duration}
+    - 'dashbot: %{repository_name} %{build_id}'
 script: mvn install -Dandroid.device=test -Dmaven.javadoc.skip=true -Dandroid.dex.optimize=false
-
-#play RS core tests only
-#script: mvn install -pl robospice-core-parent/robospice-core-test -Dandroid.device=test -Dmaven.javadoc.skip=true -Dandroid.dex.optimize=false -Dandroid.test.classes=com.octo.android.robospice.SpiceManagerTest
-
-after_failure:
-  - adb logcat -d 
-
